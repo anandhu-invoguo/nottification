@@ -1,9 +1,24 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:nottification/notification.dart';
 
 void main() {
+  // Set up global error handler
+  FlutterError.onError = (FlutterErrorDetails details) {
+    // Convert stack trace to a string, ensuring it's not null
+    String stackTraceString = details.stack?.toString() ?? "";
+
+    // Report the error to your API
+    reportErrorToAPI(details.exceptionAsString());
+
+    // Optionally, you can also log it to the console or take other actions
+    print("Caught Flutter error: ${details.exceptionAsString()}");
+    print("Stack trace: $stackTraceString");
+  };
+
   runApp(const MyApp());
 }
 
@@ -36,203 +51,65 @@ class MyHomePage extends StatelessWidget {
         ),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        elevation: 4,
       ),
       body: Center(
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            backgroundColor: Colors.indigo,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const NotificationPage()),
-            );
-          },
-          child: const Text(
-            "Go to Notifications",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class NotificationPage extends StatefulWidget {
-  const NotificationPage({super.key});
-
-  @override
-  State<NotificationPage> createState() => _NotificationPageState();
-}
-
-class _NotificationPageState extends State<NotificationPage> {
-  List<dynamic> notifications = [];
-  late Timer _timer;
-
-  final String apiUrl =
-      "https://bdbs.co.in/php_test_by_invo/anandhu/leo/notification.php";
-
-  @override
-  void initState() {
-    super.initState();
-    fetchNotifications();
-    _timer = Timer.periodic(const Duration(seconds: 10), (Timer t) {
-      fetchNotifications();
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  Future<void> fetchNotifications() async {
-    try {
-      final response = await http.get(Uri.parse(apiUrl));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        if (data is List) {
-          setState(() {
-            notifications = data.map((notification) {
-              if (notification is Map<String, dynamic>) {
-                if (notification['image'] != null &&
-                    notification['image'].isNotEmpty) {
-                  notification['image'] =
-                      "https://bdbs.co.in/php_test_by_invo/anandhu/leo/admin/uploads/${notification['image']}";
-                }
-              }
-              return notification;
-            }).toList();
-          });
-        } else {
-          print("Unexpected data format: $data");
-        }
-      } else {
-        print(
-            "Failed to load notifications. Status code: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Error fetching notifications: $e");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100], // Light background
-      appBar: AppBar(
-        title: const Text(
-          "Notifications",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-        elevation: 4,
-      ),
-      body: notifications.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: notifications.length,
-              itemBuilder: (context, index) {
-                final notification = notifications[index];
-                final imageUrl = notification['image'] ?? "";
-                final hasImage = imageUrl.isNotEmpty;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Card(
-                    elevation: 6,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(12),
-                      leading: hasImage
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                imageUrl,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.fill,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return _buildDefaultIcon();
-                                },
-                              ),
-                            )
-                          : _buildDefaultIcon(),
-                      title: Text(
-                        notification['title'] ?? "No Title",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              notification['content'] ?? "No Content",
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Align(
-                              alignment: Alignment.bottomRight,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    notification['date'] ?? "",
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    notification['time'] ?? "",
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ]),
-                    ),
-                  ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                backgroundColor: Colors.indigo,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const NotificationPage()),
                 );
               },
+              child: const Text(
+                "Go to Notifications",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // This will trigger an error
+                throw Exception(
+                    "This is a test error to check the reportErrorToAPI function.");
+              },
+              child: const Text('Trigger Error'),
+            ),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  Widget _buildDefaultIcon() {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.indigo.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.notifications_active,
-        color: Colors.indigo,
-        size: 30,
-      ),
+Future<void> reportErrorToAPI(String errorMessage) async {
+  final String apiUrl =
+      "https://bdbs.co.in/php_test_by_invo/anandhu/test/error/index.php"; // Ensure correct API path
+
+  try {
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"error_message": errorMessage}),
     );
+
+    if (response.statusCode == 200) {
+      print("Error logged successfully: ${response.body}");
+    } else {
+      print("Failed to log error: ${response.statusCode} - ${response.body}");
+    }
+  } catch (e) {
+    print("Error reporting failed: $e");
   }
 }
